@@ -12,6 +12,8 @@ import pca
 data = pre.load_file('Data/Airfoil/airfoil_self_noise.dat')
 data = pre.organise(data,"\t","\r\n")
 data = pre.standardise(data,data.shape[1])
+PCA = 0
+new_dim = 4
 
 N_val_data = 300
 
@@ -21,17 +23,31 @@ val_data = data[:N_val_data,:5]
 data = data[N_val_data:,:5]
 
 lr = 1e-1
-
-# Perform PCA
-data = pca.project_data(data,4)
-val_data = pca.project_data(val_data,4)
+fig_title = "Before applying PCA"
+if PCA:
+  # Perform PCA
+  data = pca.project_data(data,new_dim)
+  val_data = pca.project_data(val_data,new_dim)
+  fig_title = "After applying PCA"
 
 [N,M] = data.shape
 #fig = plt.figure()
 #ax = fig.add_subplot(111,projection='3d')
 #ax.scatter(new_data[:,0],new_data[:,1],new_data[:,2],marker='d',c='r')
 
-W = np.random.random([M,1])
+W = np.zeros([M,1])
+b = 0
+try:
+  W = np.load('Data/Airfoil/random_weight.npy')
+  b = np.load('Data/Airfoil/random_bias.npy')
+except Exception:
+  W = np.random.random([M,1])
+  b = np.random.rand()
+  np.save('Data/Airfoil/random_weight.npy',W)
+  np.save('Data/Airfoil/random_bias.npy',b)
+
+if PCA:
+  W = W[:new_dim,:]
 #W = np.dot(np.dot(np.linalg.inv(np.dot(data.T,data)),data.T),t)
 data = data.T # Examples are arranged in columns [features,N]
 val_data = val_data.T
@@ -82,9 +98,7 @@ for epoch in range(epochs):
 
   print("Epoch: %d, Loss: %.3f, Val Loss: %.3f, Log-Likelihood: %.3f"%(epoch,loss[epoch],val_loss[epoch],ll))
 
-"""
-Comment the following when enabling the training loop
-"""
+
 y = np.dot(W.T,data).T + b
 plt.figure()
 plt.plot(range(len(t)),t,'-b')
